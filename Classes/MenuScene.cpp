@@ -9,7 +9,7 @@
 
 #include "ui/CocosGUI.h"
 
-#include "MainScene.h"
+#include "CannonGameController.h"
 
 USING_NS_CC;
 using namespace cocos2d::ui;
@@ -46,7 +46,7 @@ bool MenuScene::init()
                 break;
             case ui::Widget::TouchEventType::ENDED:
             {
-                auto scene = MainScene::create();
+                auto scene = CannonGameController::create();
                 TransitionScene *transition = TransitionFade::create(1, scene);
                 Director::getInstance()->replaceScene(transition);
             }
@@ -59,4 +59,9 @@ bool MenuScene::init()
     
     // done
     return true;
+}
+
+MenuScene::~MenuScene()
+{
+
 }

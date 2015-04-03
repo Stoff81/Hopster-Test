@@ -1,5 +1,5 @@
 //
-//  MainScene.h
+//  CannonGameController.h
 //  ExpJam
 //
 //  Created by Two Tails on 09/12/2014.
@@ -11,13 +11,15 @@
 
 #include "cocos2d.h"
 
+class CannonGameView;
+class CannonGameModel;
 
-class MainScene : public cocos2d::Scene
+class CannonGameController : public cocos2d::Scene
 {
     typedef cocos2d::Scene Super;
 public:
     // implement the "static create()" method manually
-    CREATE_FUNC(MainScene);
+    CREATE_FUNC(CannonGameController);
 
     // scene initialisation
     virtual bool init();
@@ -45,6 +47,9 @@ public:
     
     
 private:
+    
+    CannonGameModel* mModel;
+    CannonGameView* mView;
     
     cocos2d::EventListenerKeyboard* _keyEventListener = NULL;
     cocos2d::EventListenerMouse* _mouseEventListener = NULL;
