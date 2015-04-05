@@ -1,138 +1,258 @@
 //
-//  CannonGameController.cpp
+//  CannonGame.cpp
 //  ExpJam
 //
 //  Created by Two Tails on 09/12/2014.
 //
 //
 
-#include "CannonGameController.h"
+#include "CannonGame.h"
 
+#include <random>
 #include "ui/CocosGUI.h"
 
-#include "CannonGameView.h"
+#include "CannonGameHUD.h"
 #include "CannonGameModel.h"
+#include "SpriteCreator.h"
 
 USING_NS_CC;
 using namespace cocos2d::ui;
 
-// on "init" you need to initialize your instance
-bool CannonGameController::init()
+Scene* CannonGame::createScene()
 {
-    // super init first
-    if ( !Super::init() )
+    auto scene = Scene::createWithPhysics();
+    //scene->getPhysicsWorld()->setDebugDrawMask( PhysicsWorld::DEBUGDRAW_ALL );
+    
+    auto gameLayer = CannonGame::create();
+    gameLayer->mPhysicsWorld = scene->getPhysicsWorld();
+    scene->addChild(gameLayer);
+    
+    auto hudLayer = CannonGameHUD::create();
+    hudLayer->setModel( gameLayer->getModel() );
+    scene->addChild( hudLayer );
+    
+    return scene;
+}
+
+bool CannonGame::init()
+{
+    if ( !Layer::init() )
     {
         return false;
     }
     
-    mView = CannonGameView::create();
-    this->addChild( mView );
+    mModel = std::make_shared<CannonGameModel>();
     
-    mModel = CannonGameModel::create();
+    createLand();
+    createCannon();
+    createCannonBall();
+    createLeefy();
     
-    mView->setModel( mModel );
-    
-    // done
     return true;
 }
 
-void CannonGameController::onEnter()
+void CannonGame::createLand()
+///
+/// Creates some sprites and adds them to the layer
+///
 {
-    Super::onEnter();
+    const Texture2D::TexParams repeat_params = {GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT};
+    Size visibleSize = Director::getInstance()->getVisibleSize();
     
-    // create a keyboard event listener
+    // Add some nice sky
+    Sprite* bg = createSpriteWithColor( Color4F( 0.5, 0.6, 0.9, 1 ), visibleSize.width, visibleSize.height, true );
+    bg->setPosition( visibleSize.width / 2, visibleSize.height / 2 );
+    bg->getTexture()->setTexParameters( repeat_params );
+    this->addChild( bg, -1 );
+    
+    // Add some ground
+    Sprite* ground = createSpriteWithColor( Color4F( 0, 0.7, 0.3, 1 ), visibleSize.width, 60, false );
+    ground->setPosition( visibleSize.width / 2, 30);
+    ground->getTexture()->setTexParameters( repeat_params );
+    auto body = PhysicsBody::createBox( ground->getContentSize() );
+    body->setDynamic( false );
+    ground->setPhysicsBody(body);
+    this->addChild( ground );
+    
+    // Add an obstacle
+    Sprite* box = createSpriteWithColor( Color4F( 0, 0.7, 0.3, 1 ), 200, 300, false );
+    box->setAnchorPoint( Vec2::ANCHOR_MIDDLE_BOTTOM );
+    box->setPosition( 400, 60);
+    box->getTexture()->setTexParameters( repeat_params );
+    auto box_body = PhysicsBody::createBox( box->getContentSize() );
+    box_body->setDynamic( false );
+    box->setPhysicsBody(box_body);
+    this->addChild( box );
+
+}
+
+void CannonGame::createCannon()
+///
+/// Creates cannon sprite and adds it to the layer
+///
+{
+    mCannonSprite = createSpriteWithColor( Color4F( 0.6, 0.6, 0.6, 1 ), 70, 100, false );
+    mCannonSprite->setAnchorPoint( Vec2::ANCHOR_MIDDLE_BOTTOM );
+    mCannonSprite->setPosition( 0, 60 );
+    this->addChild( mCannonSprite, 1 );
+}
+
+void CannonGame::createCannonBall()
+///
+/// Creates cannonBall sprite and adds it to the layer
+///
+{
+    auto cannonBallPB = PhysicsBody::createCircle( 80, PhysicsMaterial( 0.0f, 0.8f, 0.5f ), Vec2( 0, -20 ) );
+    cannonBallPB->setContactTestBitmask( 1 );
+    mCannonBallSprite = Sprite::create("Bomb1.png");
+    mCannonBallSprite->setPhysicsBody( cannonBallPB );
+    mCannonBallSprite->setScale( 0.2, 0.2 );
+    this->addChild( mCannonBallSprite );
+}
+
+void CannonGame::createLeefy()
+///
+/// Creates leefy target sprite and adds it to the layer
+///
+{
+    auto leefyPB = PhysicsBody::createBox( Size(255.0f, 412.0f) );
+    leefyPB->setContactTestBitmask( 1 );
+    mLeefySprite = Sprite::create("Leefy-Happy.png");
+    mLeefySprite->setPhysicsBody( leefyPB );
+    mLeefySprite->setAnchorPoint( Vec2::ANCHOR_MIDDLE_BOTTOM );
+    mLeefySprite->setScale( 0.2, 0.2 );
+    randomLeefyPosition();
+    this->addChild( mLeefySprite );
+}
+
+void CannonGame::randomLeefyPosition()
+///
+/// Moves leefy sprite to a "random" location along the ground
+///
+{
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    std::uniform_int_distribution<int> uni( visibleSize.width / 4 * 3 ,visibleSize.width - 40 ); // guaranteed unbiased
+    auto random_integer = uni(rng);
+    mLeefySprite->setPosition( random_integer, 100 );
+}
+
+void CannonGame::fireCannon()
+///
+/// Call this to fire the cannon
+///
+{
+    mCannonBallSprite->setRotation( 0 );
+    mCannonBallSprite->setPosition( 15, 85 );
+    mCannonBallSprite->setVisible( true );
+    Vec2 vector;
+    vector.x = sin( mModel->mCannon.getAngle() * M_PI / 180 );
+    vector.y = cos( mModel->mCannon.getAngle() * M_PI / 180 );
+    vector *= 120 + mModel->mCannon.getPower() * 20;
+    mCannonBallSprite->getPhysicsBody()->setAngularVelocity( 0 );
+    mCannonBallSprite->getPhysicsBody()->setVelocity( vector );
+}
+
+void CannonGame::onEnter()
+///
+/// Called when the application enters this layer
+///
+{
+    Layer::onEnter();
+    
     if( _keyEventListener == NULL )
     {
         _keyEventListener = EventListenerKeyboard::create();
-        _keyEventListener->onKeyPressed = CC_CALLBACK_2( CannonGameController::onKeyPressed, this );
-        _keyEventListener->onKeyReleased = CC_CALLBACK_2( CannonGameController::onKeyReleased, this );
+        _keyEventListener->onKeyPressed = CC_CALLBACK_2( CannonGame::onKeyPressed, this );
+        _keyEventListener->onKeyReleased = CC_CALLBACK_2( CannonGame::onKeyReleased, this );
     }
-    
-    // create a mouse event listener
-    if( _mouseEventListener == NULL )
+
+    if( _contactEventListener == NULL )
     {
-        _mouseEventListener = EventListenerMouse::create();
-        _mouseEventListener->onMouseMove = CC_CALLBACK_1( CannonGameController::onMouseMove, this );
-        _mouseEventListener->onMouseUp = CC_CALLBACK_1( CannonGameController::onMouseUp, this );
-        _mouseEventListener->onMouseDown = CC_CALLBACK_1( CannonGameController::onMouseDown, this );
-        _mouseEventListener->onMouseScroll = CC_CALLBACK_1( CannonGameController::onMouseScroll, this );
+        _contactEventListener = EventListenerPhysicsContact::create();
+        _contactEventListener->onContactBegin = CC_CALLBACK_1( CannonGame::onContactBegin, this );
+        _contactEventListener->onContactPreSolve = CC_CALLBACK_1( CannonGame::onContactBegin, this );
     }
     
-    // register event listeners
-    //_eventDispatcher->addEventListenerWithSceneGraphPriority( _keyEventListener, this );
-    //_eventDispatcher->addEventListenerWithSceneGraphPriority( _mouseEventListener, this );
+    _eventDispatcher->addEventListenerWithSceneGraphPriority( _keyEventListener, this );
+    _eventDispatcher->addEventListenerWithSceneGraphPriority( _contactEventListener, this );
     
-    // schedule update calls
     scheduleUpdate();
 }
 
-void CannonGameController::onExit()
+void CannonGame::onExit()
+///
+/// Called when the application exits this layer
+///
 {
-    Super::onExit();
+    Layer::onExit();
     
-    // de-register event listeners
     _eventDispatcher->removeEventListener( _keyEventListener );
-    _eventDispatcher->removeEventListener( _mouseEventListener );
+    _eventDispatcher->removeEventListener( _contactEventListener );
     
-    // unschedule update
     unscheduleUpdate();
 }
 
-void CannonGameController::update( float delta )
+void CannonGame::update( float delta )
+///
+/// Called every delta
+///
+/// @param delta
+/// The time in seconds since the last update
+///
 {
-    // called once per frame
-//    cocos2d::log( "Update: %f", delta );
-//    mModel->update( delta );
-    mView->update( delta );
+    mCannonSprite->setRotation( mModel->mCannon.getAngle() );
+}
+
+bool CannonGame::onContactBegin( PhysicsContact& contact )
+///
+/// The callback used for any collisions that happen
+///
+{
+    auto nodeA = contact.getShapeA()->getBody()->getNode();
+    auto nodeB = contact.getShapeB()->getBody()->getNode();
+    
+    if (( nodeA == mLeefySprite || nodeA == mCannonBallSprite ) &&
+        ( nodeB == mLeefySprite || nodeB == mCannonBallSprite ) )
+    {
+        mCannonBallSprite->setPosition( Vec2( -100, 0 ) ); //move off-screen
+        randomLeefyPosition();
+    }
+    return true;
+}
+
+void CannonGame::onKeyPressed( EventKeyboard::KeyCode keyCode, Event* event )
+///
+/// The callback used for any key presses
+///
+/// @param keyCode
+/// The key that has been pressed
+///
+/// @param Event
+/// Contains additional information about the key press
+///
+{
+    switch ( keyCode ) {
+        case EventKeyboard::KeyCode::KEY_UP_ARROW:
+            mModel->mCannon.setAngle( mModel->mCannon.getAngle() - 5 );
+            break;
+        case EventKeyboard::KeyCode::KEY_DOWN_ARROW:
+            mModel->mCannon.setAngle( mModel->mCannon.getAngle() + 5 );
+            break;
+        case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
+            mModel->mCannon.setPower( mModel->mCannon.getPower() - 1 );
+            break;
+        case EventKeyboard::KeyCode::KEY_RIGHT_ARROW:
+            mModel->mCannon.setPower( mModel->mCannon.getPower() + 1 );
+            break;
+        
+        case EventKeyboard::KeyCode::KEY_SPACE:
+            fireCannon();
+            break;
+        default:
+            break;
+    }
     
 }
 
-
-#pragma mark - Key Events
-
-
-void CannonGameController::onKeyPressed( EventKeyboard::KeyCode keyCode, Event* event )
-{
-    cocos2d::log( "Key with keycode %d pressed", keyCode );
-}
-
-void CannonGameController::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event )
-{
-    cocos2d::log( "Key with keycode %d released", keyCode );
-}
-
-
-#pragma mark - Mouse Events
-
-
-void CannonGameController::onMouseDown( Event *event )
-{
-    EventMouse* e = (EventMouse*)event;
-    std::string str = "Mouse Down detected, Key: ";
-    str += std::to_string(e->getMouseButton());
-    cocos2d::log( "%s", str.c_str() );
-}
-
-void CannonGameController::onMouseUp( Event *event )
-{
-    EventMouse* e = (EventMouse*)event;
-    std::string str = "Mouse Up detected, Key: ";
-    str += std::to_string(e->getMouseButton());
-    cocos2d::log( "%s", str.c_str() );
-}
-
-void CannonGameController::onMouseMove( Event *event )
-{
-    EventMouse* e = (EventMouse*)event;
-    std::string str = "MousePosition X:";
-    str += std::to_string(e->getCursorX()) + " Y:" + std::to_string(e->getCursorY());
-//    cocos2d::log( "%s", str.c_str() );
-}
-
-void CannonGameController::onMouseScroll( Event *event )
-{
-    EventMouse* e = (EventMouse*)event;
-    std::string str = "Mouse Scroll detected, X: ";
-    str += std::to_string(e->getScrollX()) + " Y: " + std::to_string(e->getScrollY());
-    cocos2d::log( "%s", str.c_str() );
-}

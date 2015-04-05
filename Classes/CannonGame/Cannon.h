@@ -13,7 +13,18 @@
 
 class Cannon
 {
-    cocos2d::Vec2 mPosition;
+public:
+    Cannon();
+    
+    void setAngle( float angle );
+    float getAngle(){ return mAngle; };
+
+    void setPower( float power );
+    float getPower(){ return mPower; };
+    
+private:
+    float mAngle;
+    float mPower;
 };
 
 #endif // __CANNON__

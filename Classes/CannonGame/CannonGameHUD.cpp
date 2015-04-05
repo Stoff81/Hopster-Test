@@ -1,45 +1,48 @@
 //
-//  CannonGameView.cpp
+//  CannonGameHUD.cpp
 //  ExpJam
 //
 //  Created by Tom Stoffer on 3/04/15.
 //
 //
 
-#include "CannonGameView.h"
+#include "CannonGameHUD.h"
 #include "CannonGameModel.h"
+#include "Cannon.h"
+#include "SpriteCreator.h"
 
 USING_NS_CC;
 
-bool CannonGameView::init()
+bool CannonGameHUD::init()
 {
-    // super init first
-    if ( !CCLayer::init() )
+    if ( !Layer::init() )
     {
         return false;
     }
     
-    // get visible size of window
     Size visibleSize = Director::getInstance()->getVisibleSize();
     
-    // Heading
-    auto headingLabel = Label::createWithTTF("Welcome", "Marker Felt.ttf", 48);
-    headingLabel->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2 + 150));
-    headingLabel->setColor(Color3B::WHITE);
-    auto headingMenu = MenuItemLabel::create( headingLabel );
-    this->addChild( headingMenu );
-
-    mCannonBallSprite = Sprite::create("Bomb1.png");
-    this->addChild( mCannonBallSprite );
+    auto power = Label::createWithTTF( "Power:", "Marker Felt.ttf", 30 );
+    power->setAnchorPoint( Vec2::ANCHOR_MIDDLE_LEFT );
+    power->setPosition( 30, visibleSize.height - 30  );
+    this->addChild( power, 1 );
+    
+    mPowerBar = createSpriteWithColor( Color4F( 0.8, 0.1, 0.1, 1 ), 20, 30, false );
+    mPowerBar->setAnchorPoint( Vec2::ANCHOR_MIDDLE_LEFT );
+    mPowerBar->setPosition( 120, visibleSize.height - 30 );
+    this->addChild( mPowerBar, 1 );
+    
+    scheduleUpdate();
+   
     return true;
 }
 
-void CannonGameView::setModel( CannonGameModel* model )
+void CannonGameHUD::setModel( std::shared_ptr<CannonGameModel> model )
 {
     mModel = model;
 }
 
-void CannonGameView::update( float delta )
+void CannonGameHUD::update( float delta )
 {
-    mCannonBallSprite->setPosition( mModel->mCannonBall->getPosition() );
+    mPowerBar->setScale( mModel->mCannon.getPower(), 1.0 );
 }

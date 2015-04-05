@@ -11,6 +11,8 @@
 
 #include "cocos2d.h"
 
+#include "Cannon.h"
+
 ///
 /// This class is used to store any data that is required in the cannon game
 /// There should not be any knowledge of the view or the controller here. By making the
@@ -27,8 +29,7 @@ public:
     virtual bool init();
     void update( float delta );
     
-    cocos2d::PhysicsBody* mCannonBall;
-    cocos2d::PhysicsBody* mTarget;
+    Cannon mCannon;
 };
 
 #endif //__CANNON_GAME_MODEL__

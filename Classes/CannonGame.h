@@ -1,5 +1,5 @@
 //
-//  CannonGameController.h
+//  CannonGame.h
 //  ExpJam
 //
 //  Created by Two Tails on 09/12/2014.
@@ -11,48 +11,49 @@
 
 #include "cocos2d.h"
 
-class CannonGameView;
 class CannonGameModel;
 
-class CannonGameController : public cocos2d::Scene
+class CannonGame : public cocos2d::Layer
 {
     typedef cocos2d::Scene Super;
 public:
-    // implement the "static create()" method manually
-    CREATE_FUNC(CannonGameController);
+    static cocos2d::Scene* createScene();
+    
+    CREATE_FUNC(CannonGame);
 
-    // scene initialisation
     virtual bool init();
-    // scene shown
+    
+    void createLand();
+    void createCannon();
+    void createCannonBall();
+    void createLeefy();
+    
+    void randomLeefyPosition();
+    void fireCannon();
+    
+    virtual void update( float delta );
     virtual void onEnter();
-    // scene hidden
     virtual void onExit();
     
-    // called once per frame
-    virtual void update( float delta );
+    bool onContactBegin( cocos2d::PhysicsContact& contact );
     
-    // key pressed event
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
-    // key lifted event
-    void onKeyReleased(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
     
-    // mouse pressed down
-    void onMouseDown( cocos2d::Event *event );
-    // mouse button lifted
-    void onMouseUp( cocos2d::Event *event );
-    // mouse moved
-    void onMouseMove( cocos2d::Event *event );
-    // mouse scroll
-    void onMouseScroll( cocos2d::Event *event );
-    
+    std::shared_ptr<CannonGameModel> getModel() { return mModel; };
     
 private:
     
-    CannonGameModel* mModel;
-    CannonGameView* mView;
-    
     cocos2d::EventListenerKeyboard* _keyEventListener = NULL;
-    cocos2d::EventListenerMouse* _mouseEventListener = NULL;
+    cocos2d::EventListenerPhysicsContact* _contactEventListener = NULL;
+
+    cocos2d::Scene *mScene;
+    cocos2d::PhysicsWorld *mPhysicsWorld;
+
+    std::shared_ptr<CannonGameModel> mModel;
+    
+    cocos2d::Sprite* mCannonSprite;
+    cocos2d::Sprite* mCannonBallSprite;
+    cocos2d::Sprite* mLeefySprite;
 };
 
 #endif

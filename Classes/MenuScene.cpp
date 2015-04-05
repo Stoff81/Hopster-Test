@@ -9,12 +9,11 @@
 
 #include "ui/CocosGUI.h"
 
-#include "CannonGameController.h"
+#include "CannonGame.h"
 
 USING_NS_CC;
 using namespace cocos2d::ui;
 
-// on "init" you need to initialize your instance
 bool MenuScene::init()
 {
     // super init first
@@ -46,7 +45,7 @@ bool MenuScene::init()
                 break;
             case ui::Widget::TouchEventType::ENDED:
             {
-                auto scene = CannonGameController::create();
+                auto scene = CannonGame::createScene();
                 TransitionScene *transition = TransitionFade::create(1, scene);
                 Director::getInstance()->replaceScene(transition);
             }
@@ -59,9 +58,4 @@ bool MenuScene::init()
     
     // done
     return true;
-}
-
-MenuScene::~MenuScene()
-{
-
 }
